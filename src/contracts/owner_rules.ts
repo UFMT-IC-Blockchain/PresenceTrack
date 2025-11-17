@@ -1,4 +1,4 @@
-import { Client, networks } from "owner_rules_client";
+import { Client, networks } from "./generated/owner_rules";
 import { network } from "./util";
 
 const client = new Client({

@@ -4,7 +4,7 @@ import { useWallet } from "../hooks/useWallet";
 import { useRoles } from "../hooks/useRoles";
 import ownerRules from "../contracts/owner_rules";
 import presenceEvents from "../contracts/presence_events";
-import { Client as PresenceClient } from "presence_events_client";
+import { Client as PresenceClient } from "../contracts/generated/presence_events";
 import { useNotification } from "../hooks/useNotification";
 import { loadContractMetadata } from "../debug/util/loadContractMetada";
 import { network } from "../contracts/util";

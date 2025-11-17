@@ -1,4 +1,4 @@
-import { Client, networks } from "presence_events_client";
+import { Client, networks } from "./generated/presence_events";
 import { network } from "./util";
 
 // Atualizar para o novo ID do contrato reconstruído
