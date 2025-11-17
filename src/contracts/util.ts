@@ -20,10 +20,10 @@ const parsed = envSchema.safeParse(import.meta.env);
 const env: z.infer<typeof envSchema> = parsed.success
   ? parsed.data
   : {
-      PUBLIC_STELLAR_NETWORK: "LOCAL",
-      PUBLIC_STELLAR_NETWORK_PASSPHRASE: WalletNetwork.STANDALONE,
-      PUBLIC_STELLAR_RPC_URL: "http://localhost:8000/rpc",
-      PUBLIC_STELLAR_HORIZON_URL: "http://localhost:8000",
+      PUBLIC_STELLAR_NETWORK: "TESTNET",
+      PUBLIC_STELLAR_NETWORK_PASSPHRASE: WalletNetwork.TESTNET,
+      PUBLIC_STELLAR_RPC_URL: "https://soroban-testnet.stellar.org",
+      PUBLIC_STELLAR_HORIZON_URL: "https://horizon-testnet.stellar.org",
     };
 
 export const stellarNetwork =
@@ -76,3 +76,12 @@ export const network: Network = {
   rpcUrl: rpcUrl,
   horizonUrl: horizonUrl,
 };
+
+// Contrato padrão de eventos para a rede atual
+// Este é um contrato de exemplo - substitua pelo contrato real da sua rede
+export const DEFAULT_PRESENCE_EVENTS_CONTRACT = {
+  LOCAL: "CA726ZF4OW3SP2JPKX26I6K6CPLEWX2N3YATK2JC7JUIQVY7GG6NQB2U",
+  TESTNET: "CCKLYKBIIMGQFUEXJMISGKDHIFXAP45LBRMZ6CGNLZMWFYPFZBD4N5C7",
+  FUTURENET: "",
+  PUBLIC: "",
+}[stellarNetwork] || "";

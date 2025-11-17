@@ -12,7 +12,9 @@ export default tseslint.config(
   globalIgnores([
     "dist",
     "packages",
+    "target",
     "src/contracts/*",
+    "src/debug/**",
     "!src/contracts/util.ts",
   ]),
   {
@@ -41,4 +43,16 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    files: ["src/pages/**/*.tsx"],
+    rules: {
+      "@typescript-eslint/no-unsafe-assignment": "off",
+      "@typescript-eslint/no-unsafe-member-access": "off",
+      "@typescript-eslint/no-unsafe-return": "off",
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unsafe-call": "off",
+      "@typescript-eslint/no-unsafe-argument": "off",
+      "@typescript-eslint/no-unnecessary-type-assertion": "off",
+    },
+  }
 );

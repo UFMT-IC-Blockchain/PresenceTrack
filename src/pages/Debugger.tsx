@@ -6,6 +6,7 @@ import { Box } from "../components/layout/Box.tsx";
 import { NavLink, useNavigate, useParams } from "react-router-dom";
 import { useContracts } from "../debug/hooks/useContracts.ts";
 import RenderContractMetadata from "../debug/components/RenderContractMetadata.tsx";
+import { stellarNetwork } from "../contracts/util";
 
 const Debugger: React.FC = () => {
   const { data, isLoading } = useContracts();
@@ -182,14 +183,29 @@ const Debugger: React.FC = () => {
                         </>
                       )}
                     </Box>
-                    <Button
-                      variant="tertiary"
-                      size="sm"
-                      onClick={() => setIsDetailExpanded(!isDetailExpanded)}
-                      style={{ justifySelf: "flex-end", marginTop: "1rem" }}
-                    >
-                      {isDetailExpanded ? "Hide Details" : "Show Details"}
-                    </Button>
+                    <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
+                      <Button
+                        variant="tertiary"
+                        size="sm"
+                        onClick={() => setIsDetailExpanded(!isDetailExpanded)}
+                      >
+                        {isDetailExpanded ? "Hide Details" : "Show Details"}
+                      </Button>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => {
+                          const cid = (
+                            contractMap[selectedContract]?.default as unknown as Client
+                          )?.options?.contractId || "";
+                          const net = stellarNetwork === "PUBLIC" ? "public" : "testnet";
+                          const url = `https://stellar.expert/explorer/${net}/contract/${cid}`;
+                          if (cid) window.open(url, "_blank", "noopener,noreferrer");
+                        }}
+                      >
+                        Abrir no Explorer
+                      </Button>
+                    </div>
                   </Card>
                 </div>
 
