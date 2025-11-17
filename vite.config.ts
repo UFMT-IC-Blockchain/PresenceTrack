@@ -37,9 +37,10 @@ export default defineConfig(() => {
     },
     resolve: {
       alias: {
-        owner_rules_client: path.resolve(__dirname, "target/packages/owner_rules/src/index.ts"),
-        presence_events_client: path.resolve(__dirname, "target/packages/presence_events/src/index.ts"),
+        owner_rules_client: path.resolve(__dirname, "src/contracts/generated/owner_rules.ts"),
+        presence_events_client: path.resolve(__dirname, "src/contracts/generated/presence_events.ts"),
       },
     },
   };
 });
+
