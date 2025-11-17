@@ -1,0 +1,83 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Inconsolata:wght@500&display=swap");
+
+:root {
+  --presence-bg: #121212;
+  --presence-surface: #181818;
+  --presence-card: #1b1b1b;
+  --presence-border: #262626;
+  --presence-text: #e6e6e6;
+  --presence-secondary-text: #bdbdbd;
+  --presence-primary: #448aff;
+  --presence-danger: #ff6b6b;
+  --presence-warning: #ff9f43;
+}
+
+html, body, #root {
+  background: var(--presence-bg);
+  color: var(--presence-text);
+  min-height: 100vh;
+}
+
+.content-area {
+  background: var(--presence-bg);
+  color: var(--presence-text);
+}
+
+.card {
+  background: var(--presence-card);
+  border: 1px solid var(--presence-border);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.card:hover {
+  box-shadow: 0 0 0 1px rgba(68, 138, 255, 0.15), 0 8px 24px rgba(0,0,0,0.25);
+}
+
+.primary-action {
+  background: var(--presence-primary) !important;
+  color: white !important;
+}
+
+.danger-action {
+  background: var(--presence-danger) !important;
+  color: white !important;
+}
+
+.content-area header {
+  background: var(--presence-bg) !important;
+  color: var(--presence-text) !important;
+  border-bottom: 1px solid var(--presence-border);
+}
+
+/* Fix input field visibility in dark theme */
+input, textarea, select {
+  background-color: var(--presence-surface) !important;
+  color: var(--presence-text) !important;
+  border: 1px solid var(--presence-border) !important;
+  border-radius: 6px !important;
+  padding: 8px 12px !important;
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none !important;
+  border-color: var(--presence-primary) !important;
+  box-shadow: 0 0 0 2px rgba(68, 138, 255, 0.2) !important;
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--presence-secondary-text) !important;
+  opacity: 0.7 !important;
+}
+
+/* Override Stellar Design System input styles for better visibility */
+.Input__input {
+  background-color: var(--presence-surface) !important;
+  border: 1px solid var(--presence-border) !important;
+  color: var(--presence-text) !important;
+}
+
+.Input__input:focus {
+  border-color: var(--presence-primary) !important;
+  box-shadow: 0 0 0 2px rgba(68, 138, 255, 0.2) !important;
+}
