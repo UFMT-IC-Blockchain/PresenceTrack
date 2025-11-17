@@ -72,6 +72,8 @@ impl PresenceEvents {
         attendee.require_auth();
         let ev: EventData = env.storage().instance().get(&DataKey::EventById(event_id)).expect("event not found");
         let now = env.ledger().timestamp();
+        let early_from = ev.start_ts.saturating_sub(7200);
+        if now < early_from { panic!("too early"); }
         if now > ev.end_ts { panic!("outside window"); }
         let already: bool = env.storage().instance().get(&DataKey::Presence(event_id, attendee.clone())).unwrap_or(false);
         if already { panic!("already registered"); }

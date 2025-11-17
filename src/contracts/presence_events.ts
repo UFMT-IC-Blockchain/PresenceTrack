@@ -1,8 +1,8 @@
 import { Client, networks } from "./generated/presence_events";
 import { network } from "./util";
 
-// Atualizar para o novo ID do contrato reconstruído
-const NEW_CONTRACT_ID = "CC72PQF6AY52IPX2L3YWLTXZFF4UHNX73OWNQS6UJZDQLXCVSRJKQPJH";
+// Atualizar para o novo ID do contrato publicado
+const NEW_CONTRACT_ID = "CCRZWRFSV454RYLHDFCJ27NIHUODJBOC6Y3TRYVLRX7O6KTUOEWJQMFI";
 
 // Garantir que o ID do contrato esteja atualizado no storage
 const currentStoredId = localStorage.getItem("presence_events_contract_id");
