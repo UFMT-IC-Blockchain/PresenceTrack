@@ -7,6 +7,7 @@ import Claim from "./pages/Claim";
 import Admin from "./pages/Admin";
 import Supervisor from "./pages/Supervisor";
 import Presence from "./pages/Presence";
+import Presenca from "./pages/Presenca";
 import Debugger from "./pages/Debugger.tsx";
 import { useRoles } from "./hooks/useRoles";
 import { useWallet } from "./hooks/useWallet";
@@ -83,6 +84,7 @@ function App() {
         <Route path="/admin" element={<Admin />} />
         <Route path="/supervisor" element={<Supervisor />} />
         <Route path="/presence/:event_id" element={<Presence />} />
+        <Route path="/presenca" element={<Presenca />} />
         </Route>
       </Routes>
     </OpLogProvider>

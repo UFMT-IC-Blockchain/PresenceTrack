@@ -15,6 +15,7 @@ const Sidebar: React.FC = () => {
         <NavLink to="/" className={({ isActive }) => isActive ? "nav-item nav-item-active" : "nav-item"}>Dashboard</NavLink>
         <NavLink to="/credentials" className={({ isActive }) => isActive ? "nav-item nav-item-active" : "nav-item"}>Minhas Credenciais</NavLink>
         <NavLink to="/meetings" className={({ isActive }) => isActive ? "nav-item nav-item-active" : "nav-item"}>Reuniões</NavLink>
+        <NavLink to="/presenca" className={({ isActive }) => isActive ? "nav-item nav-item-active" : "nav-item"}>Presença</NavLink>
         <NavLink to="/debug" className={({ isActive }) => isActive ? "nav-item nav-item-active" : "nav-item"}>Contratos</NavLink>
         <button onClick={toggle} className="nav-item" style={{ textAlign: "left" }}>Histórico de Operações</button>
         {(address && (isAdmin || isSupervisor)) && (
