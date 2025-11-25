@@ -12,13 +12,13 @@ import { useNotification } from "../hooks/useNotification";
 import { useRoles } from "../hooks/useRoles";
 import { useOpLog } from "../providers/OpLogProvider";
 import { QRCodeSVG } from "qrcode.react";
+import ConfirmationModal from "../components/ConfirmationModal";
 import {
   CheckCircle,
   Clock,
   Users,
   Calendar,
   QrCode,
-  UserCheck,
   UserX,
   AlertCircle,
 } from "lucide-react";
@@ -34,7 +34,7 @@ const Presence: React.FC = () => {
   const { address, signTransaction } = useWallet();
   const { addNotification } = useNotification();
   const { log } = useOpLog();
-  const { isAssociate } = useRoles();
+  const { isAssociate, isSupervisor, isAdmin } = useRoles();
   const eid = useMemo(
     () => (event_id ? BigInt(event_id) : undefined),
     [event_id],
@@ -93,6 +93,7 @@ const Presence: React.FC = () => {
   const [attendeesCursor, setAttendeesCursor] = useState<number>(0);
   const [hasMoreAttendees, setHasMoreAttendees] = useState<boolean>(true);
   const [attendeesLoading, setAttendeesLoading] = useState<boolean>(false);
+  const [showRules, setShowRules] = useState<boolean>(false);
 
   // Cache local para participantes conhecidos
 
@@ -128,6 +129,18 @@ const Presence: React.FC = () => {
 
   const formatTime = (timestamp: bigint) => {
     return new Date(Number(timestamp) * 1000).toLocaleString("pt-BR");
+  };
+
+  const formatTimeCompact = (timestamp: bigint) => {
+    const d = new Date(Number(timestamp) * 1000);
+    return d
+      .toLocaleString("pt-BR", {
+        day: "2-digit",
+        month: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+      .replace(",", "");
   };
 
   // Função auxiliar para buscar participantes via transações
@@ -638,183 +651,105 @@ const Presence: React.FC = () => {
   return (
     <Layout.Content>
       <div className="presence-container">
-        {/* Event Header Card */}
-        <div className="event-header-card">
-          <div className="event-icon">
-            <Calendar size={32} />
-          </div>
-          <div className="event-info">
-            <Text as="h1" size="xl" className="event-title">
-              {ev.name}
-            </Text>
-            <Text as="p" size="md" className="event-subtitle">
-              Evento #{event_id}
-            </Text>
-          </div>
-          <div className="event-status">
-            <div
-              className="status-indicator"
-              style={{ backgroundColor: timeInfo?.color || "var(--neon-blue)" }}
-            >
-              {timeInfo?.status === "active" && <Clock size={16} />}
-              {timeInfo?.status === "ended" && <UserX size={16} />}
-              {timeInfo?.status === "not_started" && <AlertCircle size={16} />}
-              <span>{timeInfo?.text}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Time Information Cards */}
-        <div className="time-cards-grid">
-          <div className="time-card">
-            <div className="time-card-icon">
+        <div className="event-summary-card">
+          <div className="summary-header">
+            <div className="event-icon">
               <Calendar size={24} />
             </div>
-            <div className="time-card-content">
-              <Text as="p" size="sm" className="time-card-label">
+            <div className="event-info">
+              <Text as="h1" size="lg" className="event-title">
+                {ev.name}
+              </Text>
+              <Text as="p" size="sm" className="event-subtitle">
+                Evento #{event_id}
+              </Text>
+            </div>
+            <div className="event-status">
+              <div
+                className="status-indicator"
+                style={{
+                  backgroundColor: timeInfo?.color || "var(--neon-blue)",
+                }}
+              >
+                {timeInfo?.status === "active" && <Clock size={14} />}
+                {timeInfo?.status === "ended" && <UserX size={14} />}
+                {timeInfo?.status === "not_started" && (
+                  <AlertCircle size={14} />
+                )}
+                <span>{timeInfo?.text}</span>
+              </div>
+            </div>
+          </div>
+          <div className="summary-row">
+            <div className="summary-item">
+              <Text as="p" size="xs" className="summary-label">
                 Início
               </Text>
-              <Text as="p" size="md" className="time-card-value">
+              <Text as="p" size="sm" className="summary-value">
                 {formatTime(ev.start_ts)}
               </Text>
             </div>
-          </div>
-
-          <div className="time-card">
-            <div className="time-card-icon">
-              <Clock size={24} />
-            </div>
-            <div className="time-card-content">
-              <Text as="p" size="sm" className="time-card-label">
+            <div className="summary-item">
+              <Text as="p" size="xs" className="summary-label">
                 Duração
               </Text>
-              <Text as="p" size="md" className="time-card-value">
+              <Text as="p" size="sm" className="summary-value">
                 {getDuration(ev.start_ts, ev.end_ts)}
               </Text>
             </div>
-          </div>
-
-          <div className="time-card">
-            <div className="time-card-icon">
-              <AlertCircle size={24} />
-            </div>
-            <div className="time-card-content">
-              <Text as="p" size="sm" className="time-card-label">
+            <div className="summary-item">
+              <Text as="p" size="xs" className="summary-label">
                 Tempo Restante
               </Text>
-              <Text as="p" size="md" className="time-card-value">
+              <Text as="p" size="sm" className="summary-value">
                 {getTimeRemaining(ev.start_ts, ev.end_ts)}
               </Text>
             </div>
-          </div>
-        </div>
-
-        {/* Registration Card */}
-        <div
-          className={`registration-card ${isRegistered ? "registered" : ""}`}
-        >
-          <div className="registration-header">
-            <div className="registration-icon">
-              {isRegistered ? (
-                <CheckCircle size={32} />
-              ) : (
-                <UserCheck size={32} />
-              )}
-            </div>
-            <div className="registration-info">
-              <Text as="h2" size="lg" className="registration-title">
-                {isRegistered ? "Presença Confirmada" : "Registrar Presença"}
+            <div className="summary-item">
+              <Text as="p" size="xs" className="summary-label">
+                Presença confirmada?
               </Text>
-              <Text as="p" size="md" className="registration-subtitle">
-                {isRegistered
-                  ? "Você já está registrado neste evento"
-                  : "Clique no botão abaixo para confirmar sua presença"}
+              <Text
+                as="p"
+                size="sm"
+                className={`summary-value ${isRegistered ? "confirmed" : "not-confirmed"}`}
+              >
+                {isRegistered ? "Confirmada" : "Não confirmada"}
               </Text>
+              {!isRegistered && canRegister ? (
+                <Button
+                  onClick={() => void register()}
+                  variant="primary"
+                  size="sm"
+                >
+                  Registrar
+                </Button>
+              ) : null}
             </div>
-          </div>
-
-          <div className="registration-actions">
-            <Button
-              onClick={() => {
-                log("info", "Botão de registro clicado");
-                log(
-                  "info",
-                  "Validando possibilidade de registro de presença...",
-                );
-                if (!canRegister) {
-                  log("error", "Validação: Registro NÃO permitido");
-                  if (!address) {
-                    log("info", "Botão clicado mas usuário não conectado");
-                    addNotification(
-                      "Por favor, conecte sua carteira primeiro",
-                      "warning",
-                    );
-                  } else if (!ev) {
-                    log("info", "Botão clicado mas evento não carregado");
-                    addNotification(
-                      "Aguarde o carregamento do evento",
-                      "warning",
-                    );
-                  } else if (!isAssociate) {
-                    log("info", "Botão clicado por usuário não associado");
-                    addNotification(
-                      "Apenas associados podem registrar presença",
-                      "warning",
-                    );
-                  } else if (
-                    timeInfo?.status === "not_started" &&
-                    !withinPreWindow
-                  ) {
-                    log(
-                      "info",
-                      "Registro permitido somente 2 horas antes do início",
-                    );
-                    addNotification(
-                      "Registro permitido somente 2 horas antes do início",
-                      "warning",
-                    );
-                  } else if (timeInfo?.status === "ended") {
-                    log("info", "Evento encerrado - registro não permitido");
-                    addNotification(
-                      "Evento encerrado - registro não permitido",
-                      "warning",
-                    );
-                  } else if (isRegistered) {
-                    log("info", "Botão clicado mas usuário já registrado");
-                    addNotification(
-                      "Você já está registrado neste evento",
-                      "warning",
-                    );
-                  }
-                  return;
-                }
-                log("success", "Validação: Registro permitido");
-                log("info", "Iniciando processo de registro...");
-                void register();
-              }}
-              variant={isRegistered ? "secondary" : "primary"}
-              size="md"
-              className="registration-button"
-            >
-              {isRegistered ? "✓ Registrado" : "Registrar Presença"}
-            </Button>
-
-            <Button
-              onClick={() => {
-                const newShowQR = !showQR;
-                log(
-                  "info",
-                  `${newShowQR ? "Mostrando" : "Ocultando"} QR Code do evento`,
-                );
-                setShowQR(newShowQR);
-              }}
-              variant="secondary"
-              size="md"
-              className="qr-button"
-            >
-              <QrCode size={16} />
-              {showQR ? "Ocultar QR Code" : "Mostrar QR Code"}
-            </Button>
+            <div className="summary-item">
+              <Text as="p" size="xs" className="summary-label">
+                Mostrar QR Code
+              </Text>
+              <Button
+                onClick={() => setShowQR((v) => !v)}
+                variant="secondary"
+                size="sm"
+              >
+                {showQR ? "Fechar" : "Mostrar"}
+              </Button>
+            </div>
+            <div className="summary-item">
+              <Text as="p" size="xs" className="summary-label">
+                Regras para registro de presença
+              </Text>
+              <Button
+                onClick={() => setShowRules(true)}
+                variant="secondary"
+                size="sm"
+              >
+                Ver regras
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -824,23 +759,38 @@ const Presence: React.FC = () => {
             <div className="qr-header">
               <QrCode size={24} />
               <Text as="h3" size="lg" className="qr-title">
-                QR Code do Evento
+                QR Code da carteira
               </Text>
             </div>
             <div className="qr-content">
-              <QRCodeSVG
-                value={`${window.location.origin}/presence/${event_id}`}
-                size={200}
-                level="H"
-                includeMargin={true}
-                className="qr-code"
-              />
+              {address && (
+                <QRCodeSVG
+                  value={address}
+                  size={200}
+                  level="H"
+                  includeMargin={true}
+                  className="qr-code"
+                />
+              )}
               <Text as="p" size="sm" className="qr-text">
-                Escaneie este QR code para acessar o registro de presença
+                Escaneie para obter o endereço da sua carteira
               </Text>
             </div>
           </div>
         )}
+
+        <ConfirmationModal
+          isOpen={showRules}
+          onClose={() => setShowRules(false)}
+          onConfirm={() => setShowRules(false)}
+          title="Regras para registro de presença"
+          message={
+            "Para registrar presença: você precisa estar autenticado e ser associado. O registro só é permitido a partir de 2 horas antes do início do evento e não é permitido após o término. Não é possível registrar duas vezes no mesmo evento. Supervisores podem remover uma presença quando necessário (por exemplo, correção de erros)."
+          }
+          confirmText="Entendi"
+          cancelText="Fechar"
+          type="info"
+        />
 
         {/* Attendees List Card */}
         <div className="attendees-card">
@@ -872,17 +822,19 @@ const Presence: React.FC = () => {
                   </div>
                   <div className="attendee-actions">
                     <Text as="p" size="xs" className="attendee-time">
-                      {formatTime(attendee.registeredAt)}
+                      {formatTimeCompact(attendee.registeredAt)}
                     </Text>
-                    <Button
-                      onClick={() => void removeAttendee(attendee.address)}
-                      variant="destructive"
-                      size="sm"
-                      className="remove-attendee-btn"
-                      title="Remover presença (apenas supervisores)"
-                    >
-                      <UserX size={12} />
-                    </Button>
+                    {(isAdmin || isSupervisor) && (
+                      <Button
+                        onClick={() => void removeAttendee(attendee.address)}
+                        variant="destructive"
+                        size="sm"
+                        className="remove-attendee-btn"
+                        title="Remover presença"
+                      >
+                        <UserX size={12} />
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))

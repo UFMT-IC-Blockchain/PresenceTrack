@@ -847,6 +847,84 @@
   gap: 24px;
 }
 
+.event-summary-card {
+  background: var(--dark-surface);
+  border: 1px solid var(--dark-border);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+}
+
+.summary-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.event-summary-card .event-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+}
+
+.event-summary-card .event-title {
+  font-size: 22px !important;
+  line-height: 26px !important;
+}
+
+.event-summary-card .event-subtitle {
+  font-size: 12px !important;
+}
+
+.event-summary-card .status-indicator {
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+.summary-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+@media (max-width: 640px) {
+  .summary-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.summary-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--dark-surface-2);
+  border: 1px solid var(--dark-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.summary-label {
+  color: var(--dark-text-secondary);
+  font-size: 12px;
+}
+
+.summary-value {
+  color: var(--dark-text-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+.summary-value.confirmed {
+  color: var(--neon-green);
+}
+.summary-value.not-confirmed {
+  color: var(--neon-red);
+}
+
 /* Event Header Card */
 .event-header-card {
   background: var(--dark-surface);
@@ -1138,10 +1216,24 @@
   border: 1px solid var(--dark-border);
 }
 
+.attendee-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.attendee-address {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
 .attendee-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .remove-attendee-btn {
@@ -1153,6 +1245,18 @@
 .remove-attendee-btn:hover {
   opacity: 1;
   background-color: var(--neon-red) !important;
+}
+
+.attendee-time {
+  font-size: 11px;
+  color: var(--dark-text-secondary);
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  .attendee-time {
+    font-size: 10px;
+  }
 }
 
 .load-more-container {
