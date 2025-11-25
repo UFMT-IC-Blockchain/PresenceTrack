@@ -24,10 +24,12 @@ export async function getEventContractId(): Promise<string> {
       return blockchainContract;
     }
   } catch (error) {
-    console.warn("Erro ao obter contrato da blockchain, usando fallback:", error);
+    console.warn(
+      "Erro ao obter contrato da blockchain, usando fallback:",
+      error,
+    );
   }
-  
-  
+
   // Último fallback: contrato padrão da rede
   return DEFAULT_PRESENCE_EVENTS_CONTRACT;
 }
@@ -37,24 +39,28 @@ export async function getEventContractId(): Promise<string> {
  * Apenas admins devem chamar esta função
  * Retorna a transação para ser assinada pelo chamador
  */
-export async function setEventContractId(contractId: string, publicKey?: string): Promise<AssembledTransaction<null>> {
+export async function setEventContractId(
+  contractId: string,
+): Promise<AssembledTransaction<null>> {
   if (!contractId || contractId.trim() === "") {
     throw new Error("Contract ID não pode ser vazio");
   }
-  
+
   if (!isValidContractId(contractId)) {
-    throw new Error("Contract ID inválido. Deve ter 56 caracteres alfanuméricos.");
+    throw new Error(
+      "Contract ID inválido. Deve ter 56 caracteres alfanuméricos.",
+    );
   }
-  
+
   // Passa o publicKey nas opções quando chama o método do contrato
-  const tx = await ownerRules.set_event_contract({ contract_id: contractId.trim() }, { 
-    publicKey: publicKey 
-  } as any);
-  
+  const tx = await ownerRules.set_event_contract({
+    contract_id: contractId.trim(),
+  });
+
   // Armazena localmente para backup e compatibilidade (faz isso antes de retornar a tx)
   localStorage.setItem(CONTRACT_STORAGE_KEY, contractId.trim());
   localStorage.setItem(GLOBAL_CONTRACT_SET_KEY, "true");
-  
+
   // Retorna a transação para o chamador assinar e enviar
   return tx;
 }
@@ -73,7 +79,7 @@ export async function isGlobalContractSet(): Promise<boolean> {
   } catch (error) {
     console.warn("Erro ao verificar contrato na blockchain:", error);
   }
-  
+
   return localStorage.getItem(GLOBAL_CONTRACT_SET_KEY) === "true";
 }
 
@@ -92,7 +98,7 @@ export function isValidContractId(contractId: string): boolean {
   if (!contractId || contractId.trim() === "") {
     return false;
   }
-  
+
   // Validação básica para contract ID Stellar (56 caracteres, alfanumérico)
   const trimmed = contractId.trim();
   return trimmed.length === 56 && /^[A-Z0-9]+$/.test(trimmed);

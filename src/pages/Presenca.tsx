@@ -42,8 +42,7 @@ const normalizeEvents = (items: any[]): MeetingRecord[] => {
   return items.map((raw) => {
     const start = BigInt(raw.start_ts);
     const end = BigInt(raw.end_ts);
-    const status =
-      now < start ? "Agendada" : now > end ? "Encerrada" : "Ativa";
+    const status = now < start ? "Agendada" : now > end ? "Encerrada" : "Ativa";
     return {
       id: Number(raw.id),
       name: String(raw.name),
@@ -122,8 +121,8 @@ const Presenca: React.FC = () => {
         map.set(event.id, event);
       });
 
-      const merged = Array.from(map.values()).sort(
-        (a, b) => Number(b.start_ts - a.start_ts),
+      const merged = Array.from(map.values()).sort((a, b) =>
+        Number(b.start_ts - a.start_ts),
       );
 
       setMeetings(merged);
@@ -137,7 +136,11 @@ const Presenca: React.FC = () => {
       });
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : String(error ?? "Erro");
+        error instanceof Error
+          ? error.message
+          : typeof error === "string"
+            ? error
+            : JSON.stringify(error ?? "Erro");
       log("error", `Falha ao carregar reuniões na aba Presença: ${message}`);
       addNotification("Não foi possível carregar as reuniões", "error");
     } finally {
@@ -189,7 +192,11 @@ const Presenca: React.FC = () => {
       setAttendees(collected);
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : String(error ?? "Erro");
+        error instanceof Error
+          ? error.message
+          : typeof error === "string"
+            ? error
+            : JSON.stringify(error ?? "Erro");
       setAttendeeError("Não foi possível carregar a lista de presença.");
       log("error", `Falha ao listar presenças: ${message}`);
     } finally {
@@ -269,7 +276,8 @@ const Presenca: React.FC = () => {
                       QR Codes das Reuniões
                     </Text>
                     <Text as="p" size="sm" className="presenca-card-subtitle">
-                      Compartilhe os códigos das reuniões já criadas para facilitar o registro.
+                      Compartilhe os códigos das reuniões já criadas para
+                      facilitar o registro.
                     </Text>
                   </div>
                   <Button
@@ -286,7 +294,8 @@ const Presenca: React.FC = () => {
                   <div className="presenca-empty">
                     <QrCode size={28} />
                     <Text as="p" size="sm">
-                      Nenhuma reunião encontrada. Crie reuniões para gerar QR Codes.
+                      Nenhuma reunião encontrada. Crie reuniões para gerar QR
+                      Codes.
                     </Text>
                   </div>
                 )}
@@ -308,7 +317,9 @@ const Presenca: React.FC = () => {
                         </div>
                       </div>
                       <div className="qr-card-actions">
-                        <span className={`status-chip status-${meeting.status.toLowerCase()}`}>
+                        <span
+                          className={`status-chip status-${meeting.status.toLowerCase()}`}
+                        >
                           {meeting.status}
                         </span>
                         <Button
@@ -346,7 +357,8 @@ const Presenca: React.FC = () => {
                       Lista de Presença
                     </Text>
                     <Text as="p" size="sm" className="presenca-card-subtitle">
-                      Escolha uma reunião e visualize os participantes confirmados em tempo real.
+                      Escolha uma reunião e visualize os participantes
+                      confirmados em tempo real.
                     </Text>
                   </div>
                   <div className="presenca-actions">
@@ -355,7 +367,9 @@ const Presenca: React.FC = () => {
                       value={selectedMeetingId ?? ""}
                       onChange={(event) =>
                         setSelectedMeetingId(
-                          event.target.value ? Number(event.target.value) : null,
+                          event.target.value
+                            ? Number(event.target.value)
+                            : null,
                         )
                       }
                       disabled={meetings.length === 0}
@@ -385,7 +399,9 @@ const Presenca: React.FC = () => {
                       <Text as="p" size="sm" className="presenca-summary-label">
                         Reunião
                       </Text>
-                      <Text as="p" size="md">{selectedMeeting.name}</Text>
+                      <Text as="p" size="md">
+                        {selectedMeeting.name}
+                      </Text>
                     </div>
                     <div>
                       <Text as="p" size="sm" className="presenca-summary-label">
@@ -412,7 +428,9 @@ const Presenca: React.FC = () => {
                       <Text as="p" size="sm" className="presenca-summary-label">
                         Presentes
                       </Text>
-                      <Text as="p" size="md">{attendees.length}</Text>
+                      <Text as="p" size="md">
+                        {attendees.length}
+                      </Text>
                     </div>
                   </div>
                 )}
@@ -429,18 +447,23 @@ const Presenca: React.FC = () => {
                 {attendeeError && (
                   <div className="presenca-error">
                     <AlertCircle size={20} />
-                    <Text as="p" size="sm">{attendeeError}</Text>
-                  </div>
-                )}
-
-                {!attendeesLoading && attendees.length === 0 && selectedMeeting && !attendeeError && (
-                  <div className="presenca-empty">
-                    <Users size={28} />
                     <Text as="p" size="sm">
-                      Nenhum participante confirmou presença ainda.
+                      {attendeeError}
                     </Text>
                   </div>
                 )}
+
+                {!attendeesLoading &&
+                  attendees.length === 0 &&
+                  selectedMeeting &&
+                  !attendeeError && (
+                    <div className="presenca-empty">
+                      <Users size={28} />
+                      <Text as="p" size="sm">
+                        Nenhum participante confirmou presença ainda.
+                      </Text>
+                    </div>
+                  )}
 
                 {!attendeesLoading && attendees.length > 0 && (
                   <div className="presenca-attendees">
@@ -454,7 +477,9 @@ const Presenca: React.FC = () => {
                             {attendee.address}
                           </Text>
                           <Text as="p" size="xs" className="attendee-time">
-                            {new Date(Number(attendee.registeredAt) * 1000).toLocaleString("pt-BR")}
+                            {new Date(
+                              Number(attendee.registeredAt) * 1000,
+                            ).toLocaleString("pt-BR")}
                           </Text>
                         </div>
                         <CheckCircle2 size={20} className="attendee-icon" />
@@ -474,7 +499,8 @@ const Presenca: React.FC = () => {
                     Check-in Manual e Compartilhamento
                   </Text>
                   <Text as="p" size="sm" className="presenca-card-subtitle">
-                    Gere links diretos de registro e encaminhe os participantes para a página oficial de presença.
+                    Gere links diretos de registro e encaminhe os participantes
+                    para a página oficial de presença.
                   </Text>
                 </div>
                 <Button
@@ -515,7 +541,9 @@ const Presenca: React.FC = () => {
                             typeof navigator !== "undefined" &&
                             navigator.clipboard?.writeText
                           ) {
-                            void navigator.clipboard.writeText(qrUrl(meeting.id));
+                            void navigator.clipboard.writeText(
+                              qrUrl(meeting.id),
+                            );
                             addNotification(
                               "Link copiado para a área de transferência.",
                               "success",
@@ -544,7 +572,11 @@ const Presenca: React.FC = () => {
                       <Button
                         variant="secondary"
                         size="sm"
-                        onClick={() => setQrPreview((prev) => prev === meeting.id ? null : meeting.id)}
+                        onClick={() =>
+                          setQrPreview((prev) =>
+                            prev === meeting.id ? null : meeting.id,
+                          )
+                        }
                       >
                         <QrCode size={16} />
                         {qrPreview === meeting.id ? "Ocultar QR" : "Ver QR"}
@@ -567,4 +599,3 @@ const Presenca: React.FC = () => {
 };
 
 export default Presenca;
-
