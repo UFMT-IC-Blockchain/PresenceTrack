@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { QRCodeCanvas } from "qrcode.react";
 import { Button, Input, Layout, Text, Icon } from "@stellar/design-system";
 import { useWallet } from "../hooks/useWallet";
 import { useRoles } from "../hooks/useRoles";
@@ -13,7 +14,7 @@ type EventItem = { id: number; name: string; start_ts: bigint; end_ts: bigint; s
 
 const Meetings: React.FC = () => {
   const { address, signTransaction } = useWallet();
-  const { isSupervisor } = useRoles();
+  const { isSupervisor, isAssociate } = useRoles();
   const { addNotification } = useNotification();
   const { log } = useOpLog();
   const [evtName, setEvtName] = useState("");
@@ -21,6 +22,7 @@ const Meetings: React.FC = () => {
   const [endLocal, setEndLocal] = useState<string>("");
   const [list, setList] = useState<EventItem[]>([]);
   const [qrFor, setQrFor] = useState<number | null>(null);
+  const [showQrModal, setShowQrModal] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
   const [closedList, setClosedList] = useState<EventItem[]>([]);
@@ -153,6 +155,14 @@ const Meetings: React.FC = () => {
         <div className="card">
           <Text as="h1" size="xl">Reuniões</Text>
         </div>
+        {/* Botão Registrar presença para associados */}
+        {isAssociate && (
+          <div className="card" style={{ marginTop: 12 }}>
+            <Button variant="primary" size="sm" onClick={() => setShowQrModal(true)}>
+              Registrar presença
+            </Button>
+          </div>
+        )}
         {isSupervisor && (
           <div className="card" style={{ marginTop: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -282,6 +292,28 @@ const Meetings: React.FC = () => {
               <div className="confirmation-buttons">
                 <button className="secondary-action" onClick={() => setShowCreateModal(false)}>Cancelar</button>
                 <button className="primary-action" onClick={() => void createEvent()} disabled={!address || !evtName || !startLocal || !endLocal}>Criar</button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Modal QR para associados */}
+        {showQrModal && (
+          <div className="confirmation-modal" onClick={() => setShowQrModal(false)}>
+            <div className="confirmation-content" onClick={(e) => e.stopPropagation()}>
+              <div className="confirmation-header">
+                <span className="confirmation-icon">📱</span>
+                <h3 className="confirmation-title">Seu QR de presença</h3>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, margin: "16px 0" }}>
+                {address ? (
+                  <QRCodeCanvas value={address} size={240} />
+                ) : (
+                  <Text as="p" size="md">Conecte sua carteira para gerar o QR code.</Text>
+                )}
+                <Text as="p" size="md" style={{ wordBreak: "break-all" }}>Public Key: {address}</Text>
+              </div>
+              <div className="confirmation-buttons">
+                <button className="secondary-action" onClick={() => setShowQrModal(false)}>Fechar</button>
               </div>
             </div>
           </div>

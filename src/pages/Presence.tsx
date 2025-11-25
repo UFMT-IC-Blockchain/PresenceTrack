@@ -799,48 +799,11 @@ const Presence: React.FC = () => {
               {isRegistered ? "✓ Registrado" : "Registrar Presença"}
             </Button>
 
-            <Button
-              onClick={() => {
-                const newShowQR = !showQR;
-                log(
-                  "info",
-                  `${newShowQR ? "Mostrando" : "Ocultando"} QR Code do evento`,
-                );
-                setShowQR(newShowQR);
-              }}
-              variant="secondary"
-              size="md"
-              className="qr-button"
-            >
-              <QrCode size={16} />
-              {showQR ? "Ocultar QR Code" : "Mostrar QR Code"}
-            </Button>
+            {/* Botão de QR Code removido */}
           </div>
         </div>
 
-        {/* QR Code Card */}
-        {showQR && (
-          <div className="qr-card">
-            <div className="qr-header">
-              <QrCode size={24} />
-              <Text as="h3" size="lg" className="qr-title">
-                QR Code do Evento
-              </Text>
-            </div>
-            <div className="qr-content">
-              <QRCodeSVG
-                value={`${window.location.origin}/presence/${event_id}`}
-                size={200}
-                level="H"
-                includeMargin={true}
-                className="qr-code"
-              />
-              <Text as="p" size="sm" className="qr-text">
-                Escaneie este QR code para acessar o registro de presença
-              </Text>
-            </div>
-          </div>
-        )}
+        {/* Card de QR Code removido */}
 
         {/* Attendees List Card */}
         <div className="attendees-card">

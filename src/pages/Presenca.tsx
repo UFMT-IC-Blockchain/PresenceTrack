@@ -243,19 +243,13 @@ const Presenca: React.FC = () => {
               </Text>
             </div>
             <div className="presenca-tabs">
+              {/* Apenas Painel Administrativo */}
               <button
-                className={`presence-tab ${tab === "admin" ? "presence-tab-active" : ""}`}
-                onClick={() => setTab("admin")}
+                className={`presence-tab presence-tab-active`}
                 type="button"
+                disabled
               >
                 Painel Administrativo
-              </button>
-              <button
-                className={`presence-tab ${tab === "checkin" ? "presence-tab-active" : ""}`}
-                onClick={() => setTab("checkin")}
-                type="button"
-              >
-                Check-in e Compartilhamento
               </button>
             </div>
           </div>
@@ -311,28 +305,10 @@ const Presenca: React.FC = () => {
                         <span className={`status-chip status-${meeting.status.toLowerCase()}`}>
                           {meeting.status}
                         </span>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() =>
-                            setQrPreview((prev) =>
-                              prev === meeting.id ? null : meeting.id,
-                            )
-                          }
-                        >
-                          <QrCode size={16} />
-                          {qrPreview === meeting.id ? "Ocultar QR" : "Ver QR"}
-                        </Button>
+                        {/* Botão de ver QR removido */}
                       </div>
                       {qrPreview === meeting.id && (
-                        <div className="qr-preview">
-                          <div className="qr-preview-code">
-                            <QRCodeSVG value={qrUrl(meeting.id)} size={180} />
-                          </div>
-                          <Text as="p" size="xs" className="qr-link">
-                            {qrUrl(meeting.id)}
-                          </Text>
-                        </div>
+                        {/* Preview de QR removido */}
                       )}
                     </div>
                   ))}
