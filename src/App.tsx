@@ -1,5 +1,4 @@
 import React from "react";
-import { Layout } from "@stellar/design-system";
 import "./App.css";
 import { Routes, Route, Outlet } from "react-router-dom";
 import Home from "./pages/Home";
@@ -18,6 +17,7 @@ import OperationLogPanel from "./components/OperationLogPanel";
 import Meetings from "./pages/Meetings";
 import Profiles from "./pages/Profiles";
 import Settings from "./pages/Settings";
+import Sobre from "./pages/Sobre";
 
 // Header removido; logos estão agora na Sidebar
 
@@ -35,19 +35,6 @@ const AppLayout: React.FC = () => {
       />
       <div className="content-area">
         <Outlet />
-        <Layout.Footer>
-          <span>
-            © {new Date().getFullYear()} PresenceTrack. Licensed under the{" "}
-            <a
-              href="http://www.apache.org/licenses/LICENSE-2.0"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Apache License, Version 2.0
-            </a>
-            .
-          </span>
-        </Layout.Footer>
       </div>
       <OperationLogPanel />
       <div id="globalModalRoot" />
@@ -65,6 +52,7 @@ function App() {
           <Route path="/meetings" element={<Meetings />} />
           <Route path="/profiles" element={<Profiles />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/sobre" element={<Sobre />} />
           <Route path="/debug" element={<Debugger />} />
           <Route path="/debug/:contractName" element={<Debugger />} />
           <Route path="/claim" element={<Claim />} />

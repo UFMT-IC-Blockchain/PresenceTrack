@@ -263,6 +263,16 @@ const Sidebar: React.FC<{
             Configurações
           </NavLink>
         )}
+        <NavLink
+          to="/sobre"
+          className={({ isActive }) =>
+            isActive ? "nav-item nav-item-active" : "nav-item"
+          }
+          tabIndex={ti}
+          onClick={handleItemClick}
+        >
+          Sobre
+        </NavLink>
       </nav>
     </aside>
   );

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Layout, Text, Button, Profile } from "@stellar/design-system";
+import { QRCodeSVG } from "qrcode.react";
 import { createPortal } from "react-dom";
 import { useWallet } from "../hooks/useWallet";
 import { useRoles } from "../hooks/useRoles";
@@ -11,6 +12,7 @@ import { stellarNetwork } from "../contracts/util";
 const Home: React.FC = () => {
   const { address } = useWallet();
   const [showDisconnectModal, setShowDisconnectModal] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(false);
   const { isAdmin, isSupervisor, isAssociate } = useRoles();
   return (
     <Layout.Content>
@@ -19,9 +21,6 @@ const Home: React.FC = () => {
           <div className="dashboard-header">
             <Text as="h1" size="xl" className="dashboard-title">
               Dashboard
-            </Text>
-            <Text as="p" size="md" className="dashboard-subtitle">
-              Controle suas credenciais e acesso
             </Text>
           </div>
 
@@ -53,6 +52,23 @@ const Home: React.FC = () => {
                     </Text>
                   )}
                   {stellarNetwork !== "PUBLIC" && <FundAccountButton />}
+                </div>
+              </div>
+              <div className="profile-field">
+                <Text as="p" size="sm" className="field-label">
+                  QR Code
+                </Text>
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 8 }}
+                >
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={!address}
+                    onClick={() => setShowQRModal(true)}
+                  >
+                    Mostrar QR Code
+                  </Button>
                 </div>
               </div>
             </div>
@@ -128,6 +144,68 @@ const Home: React.FC = () => {
                   onClick={() => setShowDisconnectModal(false)}
                 >
                   Cancelar
+                </Button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+
+      {showQRModal &&
+        createPortal(
+          <div
+            className="confirmation-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="qr-title"
+          >
+            <div
+              className="confirmation-content"
+              style={{ position: "relative" }}
+            >
+              <button
+                aria-label="Fechar"
+                onClick={() => setShowQRModal(false)}
+                style={{
+                  position: "absolute",
+                  right: 12,
+                  top: 12,
+                  width: 32,
+                  height: 32,
+                  borderRadius: 8,
+                  border: "1px solid var(--dark-border)",
+                  background: "var(--dark-surface)",
+                  color: "var(--text-primary)",
+                }}
+              >
+                ✖
+              </button>
+              <h2 id="qr-title" className="confirmation-title">
+                QR Code da carteira
+              </h2>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  padding: 16,
+                }}
+              >
+                {address && (
+                  <QRCodeSVG
+                    value={address}
+                    size={220}
+                    level="H"
+                    includeMargin={true}
+                  />
+                )}
+              </div>
+              <div className="confirmation-buttons">
+                <Button
+                  size="md"
+                  variant="secondary"
+                  onClick={() => setShowQRModal(false)}
+                >
+                  Fechar
                 </Button>
               </div>
             </div>
