@@ -5,7 +5,10 @@ import presenceEvents from "../contracts/presence_events";
 import { useAccountSequenceNumber } from "../debug/hooks/useAccountSequenceNumber";
 import { getNetworkHeaders } from "../debug/util/getNetworkHeaders";
 import { getTxnToSimulate } from "../debug/util/sorobanUtils";
-import { BASE_FEE } from "@stellar/stellar-sdk";
+import { BASE_FEE, StrKey } from "@stellar/stellar-sdk";
+import { BrowserMultiFormatReader } from "@zxing/browser";
+import { NotFoundException } from "@zxing/library";
+import { createPortal } from "react-dom";
 import { network } from "../contracts/util";
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useNotification } from "../hooks/useNotification";
@@ -22,7 +25,7 @@ import {
   UserX,
   AlertCircle,
 } from "lucide-react";
-import { getEventContractId } from "../util/eventContract";
+import { getEventContractId, isValidContractId } from "../util/eventContract";
 
 type Attendee = {
   address: string;
@@ -34,11 +37,13 @@ const Presence: React.FC = () => {
   const { address, signTransaction } = useWallet();
   const { addNotification } = useNotification();
   const { log } = useOpLog();
-  const { isAssociate, isSupervisor, isAdmin } = useRoles();
+  const { isSupervisor, isAdmin } = useRoles();
   const eid = useMemo(
     () => (event_id ? BigInt(event_id) : undefined),
     [event_id],
   );
+  const params = useMemo(() => new URLSearchParams(window.location.search), []);
+  const [contractReady, setContractReady] = useState(false);
   const didInitLog = useRef(false);
   const didContractLog = useRef(false);
 
@@ -52,9 +57,13 @@ const Presence: React.FC = () => {
 
       // Configura o contrato de eventos
       try {
-        const currentContractId = await getEventContractId();
+        const cidParam = params.get("cid") || "";
+        const fromQuery =
+          cidParam && isValidContractId(cidParam) ? cidParam : "";
+        const currentContractId = fromQuery || (await getEventContractId());
         if (currentContractId) {
           (presenceEvents as any).options.contractId = currentContractId;
+          setContractReady(true);
           if (!didContractLog.current) {
             log("info", `Contract ID configurado: ${currentContractId}`);
             didContractLog.current = true;
@@ -94,6 +103,155 @@ const Presence: React.FC = () => {
   const [hasMoreAttendees, setHasMoreAttendees] = useState<boolean>(true);
   const [attendeesLoading, setAttendeesLoading] = useState<boolean>(false);
   const [showRules, setShowRules] = useState<boolean>(false);
+  const [scanList, setScanList] = useState<string[]>([]);
+  const [scanning, setScanning] = useState<boolean>(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const scanTimer = useRef<number | null>(null);
+  const zxingRef = useRef<BrowserMultiFormatReader | null>(null);
+  const [showBatchConfirm, setShowBatchConfirm] = useState<boolean>(false);
+  const [showManualInsert, setShowManualInsert] = useState<boolean>(false);
+  const [manualAddress, setManualAddress] = useState<string>("");
+  const [manualError, setManualError] = useState<string>("");
+
+  const addToQueue = (addr: string) => {
+    if (!StrKey.isValidEd25519PublicKey(addr)) return;
+    setScanList((prev) => {
+      if (prev.includes(addr)) return prev;
+      return [...prev, addr];
+    });
+  };
+
+  const removeQueued = (addr: string) => {
+    setScanList((prev) => {
+      return prev.filter((a) => a !== addr);
+    });
+  };
+
+  const startScan = async () => {
+    try {
+      log("info", "Iniciando leitura de QR: solicitando câmera...");
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+        audio: false,
+      });
+      if (videoRef.current) {
+        const v = videoRef.current;
+        v.srcObject = stream;
+        v.muted = true;
+        v.playsInline = true as any;
+        v.setAttribute("autoplay", "true");
+        await new Promise<void>((resolve) => {
+          v.onloadedmetadata = () => {
+            void v.play();
+            resolve();
+          };
+        });
+        log("success", "Câmera iniciada");
+      }
+      const anyWindow: any = window as any;
+      if (anyWindow.BarcodeDetector) {
+        log("info", "BarcodeDetector disponível. Iniciando detecção...");
+        const detector = new anyWindow.BarcodeDetector({
+          formats: ["qr_code"],
+        });
+        const tick = async () => {
+          try {
+            if (!videoRef.current) return;
+            const codes = await detector.detect(videoRef.current);
+            if (codes && codes.length) {
+              let added = false;
+              codes.forEach((c: any) => {
+                const val = String(c.rawValue || c.data || "").trim();
+                if (StrKey.isValidEd25519PublicKey(val)) {
+                  addToQueue(val);
+                  added = true;
+                }
+              });
+              if (added) {
+                log("success", "QR lido e adicionado à fila");
+                stopScan();
+                setScanning(false);
+              }
+            }
+          } catch (e) {
+            void e;
+          }
+        };
+        scanTimer.current = window.setInterval(() => {
+          void tick();
+        }, 800);
+      } else {
+        log("info", "Fallback ZXing: iniciando leitura contínua...");
+        try {
+          const reader = new BrowserMultiFormatReader();
+          zxingRef.current = reader;
+          await reader.decodeFromVideoDevice(
+            undefined,
+            videoRef.current!,
+            (result, err) => {
+              if (result) {
+                const val = String(result.getText()).trim();
+                if (StrKey.isValidEd25519PublicKey(val)) {
+                  addToQueue(val);
+                  log("success", "QR lido (ZXing) e adicionado à fila");
+                  stopScan();
+                  setScanning(false);
+                }
+              } else if (err && !(err instanceof NotFoundException)) {
+                log("error", `Falha ZXing: ${String(err)}`);
+              }
+            },
+          );
+        } catch (e) {
+          addNotification("Leitor de QR não suportado no navegador", "warning");
+          log("error", `ZXing indisponível: ${String(e)}`);
+        }
+      }
+    } catch (err) {
+      addNotification("Permissão de câmera negada ou indisponível", "error");
+      log("error", `Falha ao iniciar câmera: ${String(err)}`);
+    }
+  };
+
+  const stopScan = () => {
+    try {
+      if (scanTimer.current) {
+        window.clearInterval(scanTimer.current);
+        scanTimer.current = null;
+      }
+      zxingRef.current = null;
+      const stream = videoRef.current?.srcObject as MediaStream | undefined;
+      stream?.getTracks().forEach((t) => t.stop());
+      if (videoRef.current) videoRef.current.srcObject = null;
+    } catch (e) {
+      void e;
+    }
+  };
+
+  const showConfirmBatch = () => {
+    setShowBatchConfirm(true);
+  };
+
+  const registerBatch = async () => {
+    if (!address || !eid || !isSupervisor || scanList.length === 0) return;
+    try {
+      (presenceEvents as any).options.publicKey = address;
+      const tx = await (presenceEvents as any).register_presence_batch(
+        {
+          event_id: Number(eid),
+          operator: address,
+          attendees: scanList,
+        },
+        { publicKey: address },
+      );
+      await (tx as any).signAndSend({ signTransaction });
+      addNotification("Presenças registradas", "success");
+      setScanList([]);
+      await loadAttendees(0, true);
+    } catch (e: any) {
+      addNotification(e?.message || "Falha ao registrar em lote", "error");
+    }
+  };
 
   // Cache local para participantes conhecidos
 
@@ -172,14 +330,16 @@ const Presence: React.FC = () => {
   // Load event data
   useEffect(() => {
     const loadEventData = async () => {
-      if (!eid || !address) {
+      if (!eid || !contractReady) {
         return;
       }
 
       setLoading(true);
 
       try {
-        const resp: any = await presenceEvents.get_event({ event_id: eid });
+        const resp: any = await presenceEvents.get_event({
+          event_id: BigInt(eid),
+        });
         const payload = resp?.result ?? resp;
 
         if (payload && payload.start_ts != null && payload.end_ts != null) {
@@ -229,7 +389,7 @@ const Presence: React.FC = () => {
     };
 
     void loadEventData();
-  }, [address, eid, network.rpcUrl, network.passphrase]);
+  }, [eid, contractReady]);
 
   // Função para carregar participantes com paginação
   const loadAttendees = async (cursor: number, reset: boolean = false) => {
@@ -286,10 +446,15 @@ const Presence: React.FC = () => {
 
     try {
       log("info", `Removendo presença de ${attendeeAddress.slice(0, 8)}...`);
-      await presenceEvents.remove_presence({
-        event_id: BigInt(eid),
-        attendee: attendeeAddress,
-      });
+      const tx = await (presenceEvents as any).remove_presence(
+        {
+          event_id: Number(eid),
+          operator: address,
+          attendee: attendeeAddress,
+        },
+        { publicKey: address },
+      );
+      await (tx as any).signAndSend({ signTransaction });
 
       log("success", "Presença removida com sucesso");
       addNotification("Presença removida com sucesso", "success");
@@ -348,10 +513,8 @@ const Presence: React.FC = () => {
       return;
     }
 
-    log("info", "Validando associação do usuário...");
-    if (!isAssociate) {
-      log("error", "Usuário não é associado - registro não permitido");
-      addNotification("Apenas associados podem registrar presença", "error");
+    if (!isSupervisor) {
+      addNotification("Apenas supervisores podem registrar presença", "error");
       return;
     }
 
@@ -492,6 +655,7 @@ const Presence: React.FC = () => {
       assembled = await (presenceEvents as any).register_presence(
         {
           event_id: Number(eid),
+          operator: address,
           attendee: address,
         },
         { publicKey: address },
@@ -595,7 +759,7 @@ const Presence: React.FC = () => {
     !!address &&
     !!eid &&
     !!ev &&
-    !!isAssociate &&
+    !!isSupervisor &&
     !isRegistered &&
     beforeEnd &&
     (timeInfo?.status === "active" ||
@@ -785,12 +949,163 @@ const Presence: React.FC = () => {
           onConfirm={() => setShowRules(false)}
           title="Regras para registro de presença"
           message={
-            "Para registrar presença: você precisa estar autenticado e ser associado. O registro só é permitido a partir de 2 horas antes do início do evento e não é permitido após o término. Não é possível registrar duas vezes no mesmo evento. Supervisores podem remover uma presença quando necessário (por exemplo, correção de erros)."
+            "Regras: somente supervisores podem registrar presenças. O registro é permitido a partir de 2 horas antes do início do evento e não é permitido após o término. Cada carteira só pode ser registrada uma vez por evento. Supervisores também podem remover uma presença quando necessário. Participantes associados não registram por conta própria: um supervisor realiza o registro."
           }
           confirmText="Entendi"
           cancelText="Fechar"
           type="info"
         />
+
+        {isSupervisor && (
+          <div className="supervisor-batch-card">
+            <div className="attendees-header">
+              <Users size={24} />
+              <Text as="h2" size="lg" className="attendees-title">
+                Registrar Presença (Supervisor)
+              </Text>
+            </div>
+            <div className="batch-actions">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setScanning((v) => !v);
+                  if (!scanning) {
+                    void startScan();
+                  } else {
+                    stopScan();
+                  }
+                }}
+              >
+                {scanning ? "Parar leitura" : "Ler QR Code"}
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setManualAddress("");
+                  setManualError("");
+                  setShowManualInsert(true);
+                }}
+              >
+                Inserir manual
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                disabled={!scanList.length}
+                onClick={() => showConfirmBatch()}
+              >
+                Registrar on-chain
+              </Button>
+            </div>
+            <div className="batch-list">
+              {scanList.length === 0 ? (
+                <Text as="p" size="sm" className="no-attendees-text">
+                  Nenhum endereço lido
+                </Text>
+              ) : (
+                scanList.map((addr) => (
+                  <div key={addr} className="attendee-item">
+                    <div className="attendee-info">
+                      <CheckCircle size={16} className="attendee-icon" />
+                      <Text as="p" size="sm" className="attendee-address">
+                        {addr.slice(0, 8)}...{addr.slice(-6)}
+                      </Text>
+                    </div>
+                    <div className="attendee-actions">
+                      <Button
+                        onClick={() => removeQueued(addr)}
+                        variant="destructive"
+                        size="sm"
+                        className="remove-attendee-btn"
+                        title="Remover da fila"
+                      >
+                        <UserX size={12} />
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            <div
+              className="batch-video-container"
+              style={{ display: scanning ? "block" : "none" }}
+            >
+              <video ref={videoRef} className="batch-video" muted playsInline />
+            </div>
+          </div>
+        )}
+
+        <ConfirmationModal
+          isOpen={showBatchConfirm}
+          onClose={() => setShowBatchConfirm(false)}
+          onConfirm={() => {
+            setShowBatchConfirm(false);
+            void registerBatch();
+          }}
+          title="Confirmar registro em lote"
+          message={`Serão registradas ${scanList.length} carteiras neste evento. Você precisa assinar como supervisor.`}
+          confirmText="Assinar e registrar"
+          cancelText="Cancelar"
+          type="warning"
+        />
+
+        {showManualInsert &&
+          createPortal(
+            <div className="confirmation-modal" role="dialog" aria-modal="true">
+              <div className="confirmation-content">
+                <h2 className="confirmation-title">
+                  Inserir carteira manualmente
+                </h2>
+                <div className="confirmation-message">
+                  <input
+                    value={manualAddress}
+                    onChange={(e) => setManualAddress(e.target.value)}
+                    placeholder="Endereço da carteira (G...)"
+                    style={{ width: "100%", padding: 10, borderRadius: 8 }}
+                  />
+                  {manualError && (
+                    <p style={{ color: "var(--neon-red)", marginTop: 8 }}>
+                      {manualError}
+                    </p>
+                  )}
+                </div>
+                <div className="confirmation-buttons">
+                  <Button
+                    size="md"
+                    variant="primary"
+                    onClick={() => {
+                      const val = manualAddress.trim();
+                      if (!StrKey.isValidEd25519PublicKey(val)) {
+                        setManualError("Endereço inválido");
+                        return;
+                      }
+                      addToQueue(val);
+                      addNotification("Carteira adicionada à fila", "success");
+                      setShowManualInsert(false);
+                      setManualAddress("");
+                      setManualError("");
+                    }}
+                  >
+                    Adicionar
+                  </Button>
+                  <Button
+                    size="md"
+                    variant="secondary"
+                    onClick={() => {
+                      setShowManualInsert(false);
+                      setManualAddress("");
+                      setManualError("");
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )}
 
         {/* Attendees List Card */}
         <div className="attendees-card">

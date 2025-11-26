@@ -7,7 +7,6 @@ import {
   useTransition,
 } from "react";
 import { wallet } from "../util/wallet";
-import storage from "../util/storage";
 
 export interface WalletContextType {
   address?: string;
@@ -37,10 +36,6 @@ export const WalletProvider = ({ children }: { children: React.ReactNode }) => {
 
   const nullify = () => {
     updateState(initialState);
-    storage.setItem("walletId", "");
-    storage.setItem("walletAddress", "");
-    storage.setItem("walletNetwork", "");
-    storage.setItem("networkPassphrase", "");
   };
 
   const updateState = (newState: Omit<WalletContextType, "isPending">) => {
@@ -57,62 +52,28 @@ export const WalletProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const updateCurrentWalletState = async () => {
-    // There is no way, with StellarWalletsKit, to check if the wallet is
-    // installed/connected/authorized. We need to manage that on our side by
-    // checking our storage item.
-    const walletId = storage.getItem("walletId");
-    const walletNetwork = storage.getItem("walletNetwork");
-    const walletAddr = storage.getItem("walletAddress");
-    const passphrase = storage.getItem("networkPassphrase");
-
-    if (
-      !state.address &&
-      walletAddr !== null &&
-      walletNetwork !== null &&
-      passphrase !== null
-    ) {
-      updateState({
-        address: walletAddr,
-        network: walletNetwork,
-        networkPassphrase: passphrase,
-      });
-    }
-
-    if (!walletId) {
-      nullify();
-    } else {
+    try {
       if (popupLock.current) return;
-      // If our storage item is there, then we try to get the user's address &
-      // network from their wallet. Note: `getAddress` MAY open their wallet
-      // extension, depending on which wallet they select!
-      try {
-        popupLock.current = true;
-        wallet.setWallet(walletId);
-        if (walletId !== "freighter" && walletAddr !== null) return;
-        const [a, n] = await Promise.all([
-          wallet.getAddress(),
-          wallet.getNetwork(),
-        ]);
-
-        if (!a.address) storage.setItem("walletId", "");
-        if (
-          a.address !== state.address ||
-          n.network !== state.network ||
-          n.networkPassphrase !== state.networkPassphrase
-        ) {
-          storage.setItem("walletAddress", a.address);
-          updateState({ ...a, ...n });
-        }
-      } catch (e) {
-        // If `getNetwork` or `getAddress` throw errors... sign the user out???
-        nullify();
-        // then log the error (instead of throwing) so we have visibility
-        // into the error while working on Scaffold Stellar but we do not
-        // crash the app process
-        console.error(e);
-      } finally {
-        popupLock.current = false;
+      popupLock.current = true;
+      const [a, n] = await Promise.all([
+        wallet.getAddress(),
+        wallet.getNetwork(),
+      ]);
+      if (
+        a.address !== state.address ||
+        n.network !== state.network ||
+        n.networkPassphrase !== state.networkPassphrase
+      ) {
+        updateState({ ...a, ...n });
       }
+      if (!a.address) {
+        nullify();
+      }
+    } catch {
+      nullify();
+      // Silenciar erros quando nenhuma carteira foi selecionada ainda
+    } finally {
+      popupLock.current = false;
     }
   };
 

@@ -1,4 +1,3 @@
-import storage from "./storage";
 import {
   ISupportedWallet,
   StellarWalletsKit,
@@ -22,27 +21,9 @@ export const connectWallet = async () => {
 
       // Now open selected wallet's login flow by calling `getAddress` --
       // Yes, it's strange that a getter has a side effect of opening a modal
-      void kit.getAddress().then((address) => {
-        // Once `getAddress` returns successfully, we know they actually
-        // connected the selected wallet, and we set our localStorage
-        if (address.address) {
-          storage.setItem("walletId", selectedId);
-          storage.setItem("walletAddress", address.address);
-        } else {
-          storage.setItem("walletId", "");
-          storage.setItem("walletAddress", "");
-        }
-      });
+      void kit.getAddress();
       if (selectedId == "freighter" || selectedId == "hot-wallet") {
-        void kit.getNetwork().then((network) => {
-          if (network.network && network.networkPassphrase) {
-            storage.setItem("walletNetwork", network.network);
-            storage.setItem("networkPassphrase", network.networkPassphrase);
-          } else {
-            storage.setItem("walletNetwork", "");
-            storage.setItem("networkPassphrase", "");
-          }
-        });
+        void kit.getNetwork();
       }
     },
   });
@@ -50,7 +31,6 @@ export const connectWallet = async () => {
 
 export const disconnectWallet = async () => {
   await kit.disconnect();
-  storage.removeItem("walletId");
 };
 
 function getHorizonHost(mode: string) {

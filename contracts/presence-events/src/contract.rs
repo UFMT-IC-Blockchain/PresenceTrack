@@ -68,8 +68,10 @@ impl PresenceEvents {
         env.storage().instance().get(&DataKey::EventById(event_id))
     }
 
-    pub fn register_presence(env: &Env, event_id: u64, attendee: Address) {
-        attendee.require_auth();
+    pub fn register_presence(env: &Env, event_id: u64, operator: Address, attendee: Address) {
+        operator.require_auth();
+        let enabled: bool = env.storage().instance().get(&DataKey::Supervisor(operator.clone())).unwrap_or(false);
+        if !enabled { panic!("not supervisor"); }
         let ev: EventData = env.storage().instance().get(&DataKey::EventById(event_id)).expect("event not found");
         let now = env.ledger().timestamp();
         let early_from = ev.start_ts.saturating_sub(7200);
@@ -77,11 +79,7 @@ impl PresenceEvents {
         if now > ev.end_ts { panic!("outside window"); }
         let already: bool = env.storage().instance().get(&DataKey::Presence(event_id, attendee.clone())).unwrap_or(false);
         if already { panic!("already registered"); }
-        
-        // Registrar presença
         env.storage().instance().set(&DataKey::Presence(event_id, attendee.clone()), &true);
-        
-        // Adicionar à lista de participantes
         let count: u64 = env.storage().instance().get(&DataKey::AttendeesCount(event_id)).unwrap_or(0);
         env.storage().instance().set(&DataKey::AttendeeByIndex(event_id, count), &AttendeeInfo {
             address: attendee.clone(),
@@ -89,6 +87,34 @@ impl PresenceEvents {
             active: true
         });
         env.storage().instance().set(&DataKey::AttendeesCount(event_id), &(count + 1));
+    }
+
+    pub fn register_presence_batch(env: &Env, event_id: u64, operator: Address, attendees: Vec<Address>) {
+        operator.require_auth();
+        let enabled: bool = env.storage().instance().get(&DataKey::Supervisor(operator.clone())).unwrap_or(false);
+        if !enabled { panic!("not supervisor"); }
+        let ev: EventData = env.storage().instance().get(&DataKey::EventById(event_id)).expect("event not found");
+        let now = env.ledger().timestamp();
+        let early_from = ev.start_ts.saturating_sub(7200);
+        if now < early_from { panic!("too early"); }
+        if now > ev.end_ts { panic!("outside window"); }
+        let mut count: u64 = env.storage().instance().get(&DataKey::AttendeesCount(event_id)).unwrap_or(0);
+        let mut i = 0u32;
+        while i < attendees.len() {
+            let addr = attendees.get(i).unwrap();
+            let already: bool = env.storage().instance().get(&DataKey::Presence(event_id, addr.clone())).unwrap_or(false);
+            if !already {
+                env.storage().instance().set(&DataKey::Presence(event_id, addr.clone()), &true);
+                env.storage().instance().set(&DataKey::AttendeeByIndex(event_id, count), &AttendeeInfo {
+                    address: addr.clone(),
+                    registered_at: now,
+                    active: true
+                });
+                count += 1;
+            }
+            i += 1;
+        }
+        env.storage().instance().set(&DataKey::AttendeesCount(event_id), &count);
     }
 
     pub fn has_presence(env: &Env, event_id: u64, attendee: Address) -> bool {
@@ -118,10 +144,9 @@ impl PresenceEvents {
         out
     }
 
-    pub fn remove_presence(env: &Env, event_id: u64, attendee: Address) {
-        // Apenas supervisores podem remover presenças
-        let caller = env.current_contract_address();
-        let is_supervisor: bool = env.storage().instance().get(&DataKey::Supervisor(caller.clone())).unwrap_or(false);
+    pub fn remove_presence(env: &Env, event_id: u64, operator: Address, attendee: Address) {
+        operator.require_auth();
+        let is_supervisor: bool = env.storage().instance().get(&DataKey::Supervisor(operator.clone())).unwrap_or(false);
         if !is_supervisor { panic!("not supervisor"); }
         
         // Verificar se a presença existe

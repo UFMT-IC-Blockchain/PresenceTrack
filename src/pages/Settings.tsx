@@ -13,7 +13,6 @@ import {
   getEventContractId,
   setEventContractId,
   isValidContractId,
-  clearEventContractId,
 } from "../util/eventContract";
 
 const Settings: React.FC = () => {
@@ -28,6 +27,7 @@ const Settings: React.FC = () => {
   const [supAddr, setSupAddr] = useState("");
   const [peCid, setPeCid] = useState("");
   const [currentContract, setCurrentContract] = useState("");
+  const [onChainEventCtr, setOnChainEventCtr] = useState("");
 
   const { signTransaction } = useWallet();
   const call = async (fn: () => Promise<any>) => {
@@ -46,6 +46,14 @@ const Settings: React.FC = () => {
         if (v) {
           setPeCid(v);
           setCurrentContract(v);
+        }
+        try {
+          const tx = await ownerRules.get_event_contract();
+          const sim = await tx.simulate();
+          const cid = (sim as any).result || "";
+          setOnChainEventCtr(cid);
+        } catch (e) {
+          void e;
         }
       } catch (error) {
         console.error("Erro ao carregar contrato:", error);
@@ -173,6 +181,9 @@ const Settings: React.FC = () => {
             <Text as="p" size="sm" style={{ color: "#666" }}>
               Contrato atual: {currentContract || "Nenhum definido"}
             </Text>
+            <Text as="p" size="sm" style={{ color: "#666" }}>
+              Global on-chain (owner_rules): {onChainEventCtr || "--"}
+            </Text>
           </div>
           <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
             <Button
@@ -190,10 +201,31 @@ const Settings: React.FC = () => {
                       "info",
                       `Atualizando contrato de eventos global para ${peCid}`,
                     );
-                    const tx = await setEventContractId(peCid);
+                    const tx = await setEventContractId(peCid, address);
+                    const need = (tx as any).needsNonInvokerSigningBy as
+                      | string[]
+                      | undefined;
+                    if (need && need.length && need[0] && need[0] !== address) {
+                      addNotification(
+                        `Assine com ${need[0]} (admin) para definir contrato global`,
+                        "warning",
+                      );
+                      log(
+                        "info",
+                        `Assine com ${need[0]} (admin) para definir contrato global`,
+                      );
+                      return;
+                    }
                     await (tx as any).signAndSend({ signTransaction });
                     (presenceEvents as any).options.contractId = peCid;
                     setCurrentContract(peCid);
+                    try {
+                      const r = await ownerRules.get_event_contract();
+                      const s = await r.simulate();
+                      setOnChainEventCtr((s as any).result || "");
+                    } catch (e) {
+                      void e;
+                    }
                     addNotification(
                       "Contrato de eventos atualizado globalmente na blockchain para todos os usuários",
                       "success",
@@ -217,34 +249,29 @@ const Settings: React.FC = () => {
             >
               Definir Contrato Global
             </Button>
+
             <Button
               onClick={() => {
                 void (async () => {
                   try {
-                    clearEventContractId();
-                    const defaultContract = await getEventContractId();
-                    (presenceEvents as any).options.contractId =
-                      defaultContract;
-                    setPeCid(defaultContract);
-                    setCurrentContract(defaultContract);
-                    addNotification(
-                      "Contrato global removido. Usando contrato padrão da rede.",
-                      "success",
-                    );
-                    log("info", "Contrato global removido");
+                    const r = await ownerRules.get_event_contract();
+                    const s = await r.simulate();
+                    setOnChainEventCtr((s as any).result || "");
+                    addNotification("Leitura on-chain atualizada", "success");
+                    log("info", `On-chain: ${(s as any).result || ""}`);
                   } catch (e: any) {
                     addNotification(
-                      e?.message || "Falha ao remover contrato",
+                      e?.message || "Falha ao ler on-chain",
                       "error",
                     );
-                    log("error", e?.message || "Falha ao remover contrato");
+                    log("error", e?.message || "Falha ao ler on-chain");
                   }
                 })();
               }}
               variant="secondary"
               size="md"
             >
-              Remover Global
+              Atualizar leitura on-chain
             </Button>
             <Button
               onClick={() => {
@@ -318,8 +345,6 @@ const Settings: React.FC = () => {
                       );
                     }
 
-                    // O contrato já foi salvo na blockchain, apenas atualiza o local
-                    localStorage.setItem("presence_events_contract_id", newId);
                     setPeCid(newId);
                     addNotification(
                       `Novo contrato implantado: ${newId}`,
